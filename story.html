@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Neuriya · mizan — The re-engineering story</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FAF9F6; --paper-2:#F0EEE7; --surface:#FFFFFF; --line:#E5E0D6; --line-light:#EFEDE7;
+  --ink:#1A2230; --slate:#586273; --slate-2:#3C4554; --mute:#9A9384;
+  --copper:#B0692E; --copper-2:#C57E3A; --copper-soft:rgba(176,105,46,.10);
+  --emerald:#059669; --alert:#DC2626; --amber:#B45309; --blue:#1D4ED8; --violet:#6D28D9;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#0E1218}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  -webkit-font-smoothing:antialiased;font-feature-settings:"ss01","cv11"}
+.mono{font-family:'JetBrains Mono','SF Mono',Menlo,monospace;font-feature-settings:"zero"}
+.ar{font-family:'IBM Plex Sans Arabic','Noto Sans Arabic',sans-serif}
+a{color:inherit;text-decoration:none}
+
+#stage{position:fixed;inset:0;display:grid;place-items:center}
+#deck{width:1280px;height:720px;position:relative;transform-origin:center center;flex:0 0 auto}
+.slide{position:absolute;inset:0;background:var(--paper);color:var(--ink);
+  padding:54px 64px 60px;display:none;flex-direction:column;overflow:hidden}
+.slide.on{display:flex}
+.slide.dark{background:var(--ink);color:#F2F0EA}
+.slide.dark .kick{color:var(--copper-2)}
+.slide.dark .sub,.slide.dark .foot{color:#A7AFBE}
+.slide.dark .panel{background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.12)}
+
+.kick{font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--copper);font-weight:700;margin-bottom:14px;flex:0 0 auto}
+h2{margin:0;font-size:38px;line-height:1.12;letter-spacing:-.036em;font-weight:700;max-width:1050px;flex:0 0 auto}
+h2 em{font-style:normal;color:var(--copper)}
+.slide.dark h2 em{color:var(--copper-2)}
+.sub{margin:13px 0 0;font-size:16px;line-height:1.6;color:var(--slate-2);max-width:940px;flex:0 0 auto}
+.body{flex:1 1 auto;min-height:0;display:flex;align-items:center;margin-top:22px}
+.body.top{align-items:flex-start}
+.foot{position:absolute;left:64px;right:64px;bottom:26px;font-size:12.5px;color:var(--slate);
+  display:flex;gap:10px;align-items:center;line-height:1.45}
+.foot b{color:var(--ink);font-weight:600}
+.slide.dark .foot b{color:#F2F0EA}
+.foot .rule{flex:1;height:1px;background:var(--line)}
+.slide.dark .foot .rule{background:rgba(255,255,255,.14)}
+
+.panel{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:16px 18px}
+.grid{display:grid;gap:14px;width:100%}
+.stat .v{font-size:46px;font-weight:700;letter-spacing:-.04em;line-height:1}
+.stat .v.sm{font-size:34px}
+.stat .k{font-size:12.5px;color:var(--slate);margin-top:7px;line-height:1.45}
+.slide.dark .stat .k{color:#A7AFBE}
+.good{color:var(--emerald)} .bad{color:var(--alert)} .warn{color:var(--amber)} .cop{color:var(--copper)}
+
+.tag{display:inline-block;border:1px solid var(--line);background:var(--surface);border-radius:999px;
+  padding:4px 11px;font-size:11px;color:var(--slate-2);font-weight:500;margin-inline-end:7px}
+.tag.hot{background:var(--copper-soft);border-color:rgba(176,105,46,.3);color:var(--copper);font-weight:600}
+.slide.dark .tag{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.16);color:#CDD4E0}
+
+ul.pts{margin:0;padding:0;list-style:none}
+ul.pts li{font-size:14.5px;line-height:1.55;color:var(--slate-2);margin-bottom:11px;padding-inline-start:17px;position:relative}
+ul.pts li::before{content:"";position:absolute;inset-inline-start:0;top:8px;width:6px;height:6px;border-radius:50%;background:var(--copper)}
+ul.pts li b{color:var(--ink);font-weight:600}
+.slide.dark ul.pts li{color:#C3CAD6} .slide.dark ul.pts li b{color:#F2F0EA}
+
+svg{display:block;overflow:visible}
+svg text{font-family:'Inter',sans-serif}
+svg text.m{font-family:'JetBrains Mono',monospace}
+
+#hud{position:fixed;bottom:14px;left:0;right:0;display:flex;justify-content:center;gap:14px;align-items:center;z-index:20}
+#hud .btn{border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#C3CAD6;
+  border-radius:999px;padding:5px 13px;font-size:11.5px;cursor:pointer;font-family:inherit}
+#hud .btn:hover{border-color:var(--copper-2);color:#fff}
+#ct{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#8892A4}
+#bar{position:fixed;top:0;left:0;height:2px;background:var(--copper);z-index:30;width:0;transition:width .25s}
+
+@media print{
+  html,body{overflow:visible;background:#fff;height:auto}
+  #hud,#bar{display:none}
+  #stage{position:static;display:block}
+  #deck{transform:none!important;width:1280px;height:auto}
+  .slide{position:static;display:flex!important;height:720px;page-break-after:always;border:1px solid #ddd}
+}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="stage"><div id="deck"></div></div>
+<div id="hud">
+  <button class="btn" onclick="go(cur-1)">←</button>
+  <span id="ct">1 / 1</span>
+  <button class="btn" onclick="go(cur+1)">→</button>
+  <button class="btn" onclick="fs()">Full screen</button>
+  <button class="btn" onclick="window.print()">Print</button>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   THE DATA — every figure traces to a deliverable. Nothing is decorative.
+   ══════════════════════════════════════════════════════════════════════════ */
+const D = {
+  groups: [
+    {n:'Quote & activate',  b:54, a:6.7,  s:'V1'},
+    {n:'Contract signed',   b:72, a:24,   s:'V1', gate:true},
+    {n:'Gate & receive',    b:21, a:3.0,  s:'V2', gate:true},
+    {n:'Pick & dispatch',   b:22, a:6.3,  s:'V3', gate:true},
+    {n:'Rate, clear, close',b:77, a:4.9,  s:'V5', gate:true},
+    {n:'Return & recover',  b:30, a:6.0,  s:'V4', gate:true},
+  ],
+  waste: [
+    {n:'Extra-processing', v:11, e:'Re-keying, reconciling, re-approving'},
+    {n:'Overproduction',   v:4,  e:'Documents produced twice'},
+    {n:'Waiting',          v:3,  e:'For an approval, an answer, a number'},
+    {n:'Non-utilised talent',v:3,e:'Skilled staff doing data entry'},
+    {n:'Motion',           v:2,  e:'Walking to a terminal'},
+    {n:'Defects',          v:1,  e:'Mispicks, wrong batch'},
+  ],
+  residual: [
+    {n:'S04 Contract signed', v:22.0, gate:true},
+    {n:'S19 Returned',        v:4.0,  gate:true},
+    {n:'S16 Rated & invoiced',v:2.0,  gate:true},
+    {n:'S08 + S13 floor',     v:0.8,  gate:true},
+    {n:'S03 Quotation',       v:1.8},
+    {n:'S01 Enquiry',         v:1.0},
+    {n:'All other stages',    v:2.2},
+  ],
+  lines: [
+    {n:'Warehousing',        s:'full'},
+    {n:'Customs Clearance',  s:'partial'},
+    {n:'Transportation',     s:'partial'},
+    {n:'SFDA Certification', s:'partial'},
+    {n:'SASO / Saber',       s:'partial'},
+    {n:'Consultancy',        s:'billable'},
+    {n:'Freight Forwarding', s:'none'},
+    {n:'Equipment Handling', s:'none'},
+  ],
+  maturity: [
+    {n:'Price & benchmark',      a:2, t:5},
+    {n:'Rate & accrue',          a:2, t:5},
+    {n:'Control stock',          a:3, t:5},
+    {n:'Receive & verify',       a:3, t:4},
+    {n:'Allocate & release',     a:3, t:4},
+    {n:'Load & dispatch',        a:2, t:4},
+    {n:'Enforce controls',       a:2, t:4},
+    {n:'Monitor conditions',     a:2, t:4},
+    {n:'Contract & agree',       a:2, t:3},
+    {n:'Reverse & recover',      a:1, t:3},
+    {n:'Measure cost to serve',  a:1, t:4},
+  ],
+  waves: [
+    {n:'0 · Baseline',      s:0,  e:1.5, c:'#586273', d:'No system change. The gate everyone skips'},
+    {n:'1 · The spine',     s:1.5,e:5,   c:'#B0692E', d:'Ledger, floor capture, gate control, clearance'},
+    {n:'2 · Commercial',    s:5,  e:8,   c:'#059669', d:'Contracts, rating, e-signature, cost into billing'},
+    {n:'3 · Market unlocks',s:8,  e:14,  c:'#1D4ED8', d:'Serialisation, calibration, hazard, reverse'},
+    {n:'4 · Intelligence',  s:14, e:20,  c:'#6D28D9', d:'Cost-to-serve, portal, integration, agents'},
+    {n:'5 · Portfolio',     s:20, e:24,  c:'#B45309', left:true, d:'Undated — awaits a decision, not a budget'},
+  ],
+  cash: [{y:0,v:-1.020},{y:1,v:-0.731},{y:2,v:0.1475},{y:3,v:1.026},{y:4,v:1.9045},{y:5,v:2.783}],
+  /* Figures come from deliverable 05 §5 and are asserted against the model in
+     scripts/audit-consulting.js §FINANCE. Do not edit here — edit the model. */
+  sens: [
+    {n:'Leakage at 4%',            v:3.39},
+    {n:'Base case',                v:1.62, base:true},
+    {n:'Implementation +40%',      v:1.21},
+    {n:'No margin benefit',        v:0.96},
+    {n:'Leakage at 1%',            v:0.74},
+    {n:'All three together',       v:-0.33},
+  ],
+  risks: [
+    {id:'R01',l:3,i:5,dx:-14,n:'DG sold, control absent',red:true},
+    {id:'R02',l:3,i:5,dx:14,n:'Pharma before serialisation',red:true},
+    {id:'R03',l:4,i:4,n:'No baseline captured',red:true},
+    {id:'R21',l:3,i:5,n:'Tenant isolation in code',red:true},
+    {id:'R06',l:3,i:4,n:'Leakage lower than modelled'},
+    {id:'R07',l:3,i:4,n:'Compliance reporting line'},
+    {id:'R08',l:4,i:3,n:'Hours neither cut nor redeployed'},
+    {id:'R16',l:4,i:2,n:'Scope creep'},
+    {id:'R12',l:3,i:3,n:'Build-or-adopt unresolved'},
+    {id:'R17',l:2,i:3,n:'Offline conflicts'},
+  ],
+};
+const C = {ink:'#1A2230',slate:'#586273',mute:'#9A9384',line:'#E5E0D6',copper:'#B0692E',
+           emerald:'#059669',alert:'#DC2626',amber:'#B45309',blue:'#1D4ED8',violet:'#6D28D9',paper:'#FAF9F6'};
+
+/* ── tiny svg helpers ─────────────────────────────────────────────────── */
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const svg=(w,h,inner)=>`<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-height:${h}px">${inner}</svg>`;
+const t=(x,y,s,o={})=>`<text x="${x}" y="${y}" fill="${o.fill||C.slate}" font-size="${o.size||12}" `+
+  `font-weight="${o.w||400}" text-anchor="${o.anchor||'start'}" class="${o.mono?'m':''}" `+
+  `${o.op?`opacity="${o.op}"`:''}>${esc(s)}</text>`;
+const rect=(x,y,w,h,f,o={})=>`<rect x="${x}" y="${y}" width="${Math.max(0,w)}" height="${h}" fill="${f}" `+
+  `rx="${o.r===undefined?2:o.r}" ${o.op?`opacity="${o.op}"`:''} ${o.stroke?`stroke="${o.stroke}" stroke-width="${o.sw||1}"`:''}/>`;
+const line=(x1,y1,x2,y2,c,o={})=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" `+
+  `stroke-width="${o.w||1}" ${o.dash?`stroke-dasharray="${o.dash}"`:''} ${o.op?`opacity="${o.op}"`:''}/>`;
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE VISUALS
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* 19 stages as one bar, before — showing how lopsided it already is */
+function vSituation(){
+  const W=1120,H=120,pad=0;
+  const tot=D.groups.reduce((s,g)=>s+g.b,0);
+  let x=0,out='';
+  const cols=[C.copper,C.copper,C.emerald,C.blue,C.violet,C.amber];
+  D.groups.forEach((g,i)=>{
+    const w=g.b/tot*W;
+    out+=rect(x,30,w-2,44,cols[i],{r:2});
+    if(w>70){
+      out+=t(x+8,56,g.n,{fill:'#fff',size:12,w:600});
+      out+=t(x+8,70,g.b+' h',{fill:'#fff',size:11,mono:true,op:.8});
+    }
+    x+=w;
+  });
+  out+=t(0,18,'ENQUIRY',{size:10,w:700,fill:C.mute});
+  out+=t(W,18,'CASH',{size:10,w:700,fill:C.mute,anchor:'end'});
+  out+=t(0,100,'276 hours end to end · 17.1 of them value-added',{size:14,w:600,fill:C.ink});
+  out+=t(W,100,'process cycle efficiency 6.2%',{size:14,w:600,fill:C.alert,anchor:'end'});
+  return svg(W,H,out);
+}
+
+/* paired before / after bars */
+function vBeforeAfter(){
+  const W=1120,rowH=52,H=D.groups.length*rowH+58;
+  const max=Math.max(...D.groups.map(g=>g.b)), L=190, BW=W-L-160;
+  const paper = g => g.s==='V1'||g.s==='V5'||g.s==='V4';   /* commercial, financial, administrative */
+  let out='';
+  out+=t(L,10,'AS-IS',{size:9.5,w:700,fill:C.mute});
+  out+=t(L+64,10,'TO-BE',{size:9.5,w:700,fill:C.mute});
+  out+=t(W,10,'HOURS REMOVED',{size:9.5,w:700,fill:C.mute,anchor:'end'});
+  D.groups.forEach((g,i)=>{
+    const y=24+i*rowH, col = paper(g)?C.copper:C.emerald, cut=g.b-g.a;
+    out+=t(L-14,y+16,g.n,{size:13.5,w:600,fill:C.ink,anchor:'end'});
+    out+=t(L-14,y+30,paper(g)?'office':'floor',{size:10.5,fill:col,anchor:'end',w:600});
+    out+=rect(L,y+4,g.b/max*BW,15,C.line,{r:2});
+    out+=t(L+g.b/max*BW+8,y+16,g.b+' h',{size:11,mono:true,fill:C.slate});
+    out+=rect(L,y+23,g.a/max*BW,15,col,{r:2});
+    out+=t(L+Math.max(g.a/max*BW,3)+8,y+35,g.a+' h',{size:11,mono:true,fill:C.ink,w:600});
+    out+=t(W-4,y+27,'−'+cut.toFixed(cut%1?1:0)+' h',{size:17,w:700,fill:col,anchor:'end'});
+  });
+  const y=24+D.groups.length*rowH+6;
+  out+=line(L,y,W,y,C.line,{});
+  out+=rect(L,y+12,BW*0.85,13,C.copper,{r:2});
+  out+=rect(L+BW*0.85,y+12,BW*0.15,13,C.emerald,{r:2});
+  out+=t(L+BW*0.85/2,y+22,'85% of the 225 hours removed',{size:10.5,w:700,fill:'#fff',anchor:'middle'});
+  out+=t(W-4,y+23,'225 h removed in total',{size:11.5,fill:C.slate,anchor:'end'});
+  return svg(W,H,out);
+}
+
+/* pareto of the eight wastes */
+function vWaste(){
+  const W=1100,H=250,L=180,BW=W-L-120;
+  const max=Math.max(...D.waste.map(w=>w.v)), tot=24;
+  let out='';
+  D.waste.forEach((w,i)=>{
+    const y=i*38;
+    out+=t(L-14,y+20,w.n,{size:13.5,w:i===0?700:500,fill:i===0?C.ink:C.slate_2||C.slate,anchor:'end'});
+    out+=rect(L,y+8,w.v/max*BW,18,i===0?C.copper:C.line,{r:2});
+    out+=t(L+w.v/max*BW+10,y+22,w.v,{size:13,mono:true,w:700,fill:i===0?C.copper:C.slate});
+    out+=t(L+w.v/max*BW+34,y+22,Math.round(w.v/tot*100)+'%',{size:11,mono:true,fill:C.mute});
+    if(i===0) out+=t(L+230,y+22,'— re-keying, reconciling, re-approving',{size:12,fill:C.copper});
+  });
+  out+=line(L,230,L+BW,230,C.line,{});
+  out+=t(L,246,'24 recurring tasks removed, each naming a role and a frequency',{size:12,fill:C.mute});
+  return svg(W,H,out);
+}
+
+/* two gauges: lead time and PCE */
+function vResult(){
+  const W=1120,H=260;
+  let out='';
+  /* lead time bar */
+  out+=t(0,16,'END-TO-END LEAD TIME',{size:9.5,w:700,fill:C.mute});
+  out+=rect(0,28,W*0.62,26,C.line,{r:3});
+  out+=t(10,46,'276 h',{size:14,mono:true,w:700,fill:C.slate});
+  out+=rect(0,62,W*0.62*(50.9/276),26,C.emerald,{r:3});
+  out+=t(W*0.62*(50.9/276)+12,80,'50.9 h',{size:14,mono:true,w:700,fill:C.emerald});
+  out+=t(W*0.62+24,58,'−81.6%',{size:34,w:700,fill:C.emerald});
+
+  /* PCE */
+  const gy=140, gw=W*0.62;
+  out+=t(0,gy-6,'PROCESS CYCLE EFFICIENCY — VALUE-ADDED TIME ÷ ELAPSED TIME',{size:9.5,w:700,fill:C.mute});
+  out+=rect(0,gy+6,gw,26,C.line,{r:3});
+  out+=rect(0,gy+6,gw*0.062,26,C.alert,{r:3});
+  out+=t(gw*0.062+10,gy+24,'6.2% as-is',{size:13,mono:true,w:600,fill:C.alert});
+  out+=rect(0,gy+40,gw,26,C.line,{r:3});
+  out+=rect(0,gy+40,gw*0.335,26,C.emerald,{r:3});
+  out+=t(gw*0.335+10,gy+58,'33.5% to-be',{size:13,mono:true,w:600,fill:C.emerald});
+  out+=line(gw*0.25,gy,gw*0.25,gy+74,C.amber,{dash:'3 3',w:1.5});
+  out+=t(gw*0.25+6,gy+90,'25% — the usual lean target for a service process',{size:11.5,fill:C.amber});
+  out+=t(W*0.62+24,gy+48,'5.4×',{size:34,w:700,fill:C.emerald});
+  return svg(W,H,out);
+}
+
+/* the residual, split gates vs addressable */
+function vResidual(){
+  const W=1120,H=250;
+  const tot=33.8, L=0, BW=W;
+  let out='',x=0;
+  D.residual.forEach(r=>{
+    const w=r.v/tot*BW;
+    out+=rect(x,40,w-2,52,r.gate?C.amber:C.emerald,{r:2,op:r.n.startsWith('S04')?1:(r.gate?.62:.85)});
+    if(w>84){
+      out+=t(x+9,64,r.n,{fill:'#fff',size:11.5,w:600});
+      out+=t(x+9,80,r.v+' h',{fill:'#fff',size:11,mono:true,op:.85});
+    }
+    x+=w;
+  });
+  out+=t(0,26,'33.8 HOURS OF WAITING REMAIN',{size:9.5,w:700,fill:C.mute});
+  /* bracket for gates */
+  const gw=28.8/tot*BW;
+  out+=line(0,104,gw,104,C.amber,{w:2});
+  out+=line(0,104,0,98,C.amber,{w:2}); out+=line(gw,104,gw,98,C.amber,{w:2});
+  out+=t(gw/2,124,'28.8 h — inside five human gates we chose not to automate',{size:13,w:600,fill:C.amber,anchor:'middle'});
+  out+=t(gw/2,142,'85% of everything that is left',{size:12,fill:C.amber,anchor:'middle',op:.8});
+  out+=line(gw,104,BW,104,C.emerald,{w:2});
+  out+=line(BW,104,BW,98,C.emerald,{w:2});
+  out+=t((gw+BW)/2,124,'5.0 h',{size:13,w:600,fill:C.emerald,anchor:'middle'});
+  out+=t((gw+BW)/2,142,'mechanically addressable',{size:12,fill:C.emerald,anchor:'middle',op:.85});
+  /* the four acts */
+  const acts=[['Contract execution','a legal act'],['Revenue approval','the control behind every control'],
+              ['Physical confirmation','receipt, pick, load'],['Condition judgement','grading, disposition']];
+  out+=t(0,184,'THE FOUR ACTS NEVER AUTOMATED, AT ANY BUSINESS CASE',{size:9.5,w:700,fill:C.mute});
+  acts.forEach((a,i)=>{ const x=i*(W/4);
+    out+=rect(x,199,9,9,C.amber,{r:2});
+    out+=t(x+16,208,a[0],{size:12.5,w:600,fill:C.ink});
+    out+=t(x+16,224,a[1],{size:11,fill:C.slate}); });
+  return svg(W,H,out);
+}
+
+/* the one gate */
+function vGate(){
+  const W=1100,H=240;
+  let out='';
+  const BW=760;
+  out+=t(0,16,'S04 · CONTRACT SIGNED — TODAY',{size:9.5,w:700,fill:C.mute});
+  out+=rect(0,28,BW,42,C.amber,{r:3,op:.22});
+  out+=rect(0,28,BW*(2/24),42,C.amber,{r:3});
+  out+=t(10,54,'2 h',{size:13,mono:true,w:700,fill:'#fff'});
+  out+=t(BW*(2/24)+14,48,'22 hours of waiting',{size:15,w:700,fill:C.amber});
+  out+=t(BW*(2/24)+14,66,'a document in an inbox, printed, stamped, scanned, returned',{size:12,fill:C.slate});
+  out+=t(BW+22,56,'24 h',{size:20,mono:true,w:700,fill:C.ink});
+
+  out+=t(0,116,'WITH ELECTRONIC SIGNATURE — THE ACT STAYS HUMAN',{size:9.5,w:700,fill:C.mute});
+  out+=rect(0,128,BW*(7/24),42,C.emerald,{r:3,op:.22});
+  out+=rect(0,128,BW*(2/24),42,C.emerald,{r:3});
+  out+=t(10,154,'2 h',{size:13,mono:true,w:700,fill:'#fff'});
+  out+=t(BW*(7/24)+14,156,'6–8 h',{size:20,mono:true,w:700,fill:C.emerald});
+
+  out+=line(0,196,W,196,C.line,{});
+  const facts=[['65%','of all residual waiting'],['51 h → 34 h','end to end'],['33.5% → ~50%','process cycle efficiency'],['none','owns e-signature today']];
+  facts.forEach((f,i)=>{
+    out+=t(i*(W/4),222,f[0],{size:19,w:700,fill:i===3?C.alert:C.emerald});
+    out+=t(i*(W/4),238,f[1],{size:11.5,fill:C.slate});
+  });
+  return svg(W,H,out);
+}
+
+/* eight service lines as blocks */
+function vLines(dark){
+  const W=1120,H=250, bw=(W-7*12)/8;
+  const col={full:C.emerald,partial:C.amber,billable:dark?'#8892A4':C.slate,none:C.alert};
+  const lab={full:'covered',partial:'partial',billable:'billable only',none:'nothing'};
+  const fg   = dark ? '#F2F0EA' : C.ink;
+  const dim  = dark ? '#A7AFBE' : C.slate;
+  const track= dark ? 'rgba(255,255,255,.10)' : C.line;
+  let out='';
+  D.lines.forEach((l,i)=>{
+    const x=i*(bw+12);
+    const fill = l.s==='full'?1 : l.s==='partial'?0.45 : l.s==='billable'?0.25 : 0;
+    out+=rect(x,20,bw,108,track,{r:4});
+    if(fill>0) out+=rect(x,20+108*(1-fill),bw,108*fill,col[l.s],{r:4});
+    const w=l.n.split(' ');
+    out+=t(x+bw/2,150,w[0],{size:12,w:600,fill:fg,anchor:'middle'});
+    if(w[1]) out+=t(x+bw/2,165,w.slice(1).join(' '),{size:12,w:600,fill:fg,anchor:'middle'});
+    out+=t(x+bw/2,182,lab[l.s],{size:10.5,fill:col[l.s],anchor:'middle',w:600});
+  });
+  out+=line(0,206,W,206,dark?'rgba(255,255,255,.16)':C.line,{});
+  out+=t(0,230,'One line of eight has a process that executes it.',{size:17,w:700,fill:fg});
+  out+=t(0,248,'The four-service-line invoice is priced from activity the system never captured.',{size:13,fill:dim});
+  return svg(W,H,out);
+}
+
+/* dumbbell: as-is vs target maturity */
+function vMaturity(){
+  const W=1080,rowH=31,H=D.maturity.length*rowH+40,L=230,BW=W-L-130;
+  const sc=v=>L+(v-1)/4*BW;
+  let out='';
+  for(let i=1;i<=5;i++){ out+=line(sc(i),16,sc(i),H-32,C.line,{dash:'2 4'});
+    out+=t(sc(i),10,i,{size:10,mono:true,fill:C.mute,anchor:'middle'}); }
+  D.maturity.forEach((m,i)=>{
+    const y=30+i*rowH;
+    out+=t(L-16,y+4,m.n,{size:13,w:500,fill:C.ink,anchor:'end'});
+    out+=line(sc(m.a),y,sc(m.t),y,m.t-m.a>=3?C.emerald:C.copper,{w:5,op:.35});
+    out+=`<circle cx="${sc(m.a)}" cy="${y}" r="5.5" fill="${C.paper}" stroke="${C.slate}" stroke-width="1.6"/>`;
+    out+=`<circle cx="${sc(m.t)}" cy="${y}" r="5.5" fill="${m.t-m.a>=3?C.emerald:C.copper}"/>`;
+    /* Contract & agree is capped by signature latency, which wave 2 addresses — not a missing prerequisite */
+    const blocked = m.n==='Reverse & recover'||m.n==='Measure cost to serve'||m.n==='Monitor conditions';
+    if(blocked) out+=t(W-116,y+4,'prerequisite missing',{size:10.5,fill:C.alert,w:600});
+  });
+  out+=t(L,H-10,'○ today    ● target',{size:11.5,fill:C.slate,mono:true});
+  return svg(W,H,out);
+}
+
+/* wave timeline */
+function vWaves(){
+  const W=1100,H=250,L=150,BW=W-L-30,months=24;
+  const sx=m=>L+m/months*BW;
+  let out='';
+  for(let m=0;m<=24;m+=3){ out+=line(sx(m),14,sx(m),H-46,C.line,{dash:'2 4'});
+    out+=t(sx(m),8,'M'+m,{size:10,mono:true,fill:C.mute,anchor:'middle'}); }
+  D.waves.forEach((w,i)=>{
+    const y=26+i*32;
+    out+=t(L-14,y+13,w.n,{size:12.5,w:600,fill:C.ink,anchor:'end'});
+    out+=rect(sx(w.s),y,sx(w.e)-sx(w.s),19,w.c,{r:3,op:i===5?.35:1});
+    /* the last bar runs to the canvas edge, so its note goes to the left of it */
+    out+= w.left ? t(sx(w.s)-12,y+13,w.d,{size:11.5,fill:C.slate,anchor:'end'})
+                 : t(sx(w.e)+10,y+13,w.d,{size:11.5,fill:C.slate});
+  });
+  out+=line(L,H-38,L+BW,H-38,C.line,{});
+  out+=t(L,H-18,'Rule: the ledger first · capture before compute · a control ships with the process it constrains',{size:12,fill:C.slate});
+  out+=t(L,H-2,'Nothing that closes a market sits in a late wave — which is why wave 3 is sequenced by pipeline, not architecture',{size:12,fill:C.slate});
+  return svg(W,H,out);
+}
+
+/* cumulative cash flow */
+function vCase(){
+  const W=620,H=250,L=58,B=H-38,BW=W-L-20,BH=B-20;
+  const min=-1.2,max=3.0, sy=v=>B-(v-min)/(max-min)*BH, sx=y=>L+y/5*BW;
+  let out='';
+  [-1,0,1,2,3].forEach(v=>{ out+=line(L,sy(v),L+BW,sy(v),v===0?C.slate:C.line,{dash:v===0?'':'2 4'});
+    out+=t(L-8,sy(v)+4,v,{size:10.5,mono:true,fill:C.mute,anchor:'end'}); });
+  let path='';
+  D.cash.forEach((p,i)=>{ path+=(i?'L':'M')+sx(p.y)+' '+sy(p.v); });
+  out+=`<path d="${path}" fill="none" stroke="${C.copper}" stroke-width="2.5" stroke-linejoin="round"/>`;
+  D.cash.forEach(p=>{ out+=`<circle cx="${sx(p.y)}" cy="${sy(p.v)}" r="4" fill="${p.v<0?C.alert:C.emerald}"/>`;
+    out+=t(sx(p.y),B+16,'Y'+p.y,{size:10.5,mono:true,fill:C.mute,anchor:'middle'}); });
+  const px=L+(1+731/878.5)/5*BW;
+  out+=line(px,sy(min),px,sy(max),C.emerald,{dash:'3 3',w:1.5});
+  out+=t(px+7,sy(2.2),'payback',{size:11.5,w:700,fill:C.emerald});
+  out+=t(px+7,sy(1.95),'month 22',{size:11.5,fill:C.emerald});
+  out+=t(L,14,'CUMULATIVE NET CASH · SAR MILLION',{size:9.5,w:700,fill:C.mute});
+  return svg(W,H,out);
+}
+
+/* sensitivity tornado */
+function vSens(){
+  const W=460,H=250,L=150,BW=W-L-56, zero=L;
+  const max=3.8, sx=v=>zero+v/max*BW;
+  let out='';
+  out+=line(zero,10,zero,H-30,C.slate,{});
+  D.sens.forEach((s,i)=>{
+    const y=18+i*34;
+    out+=t(L-12,y+13,s.n,{size:12,w:s.base?700:500,fill:s.base?C.ink:C.slate,anchor:'end'});
+    const w=Math.abs(sx(s.v)-zero);
+    out+=rect(s.v<0?zero-w:zero,y,w,18,s.v<0?C.alert:(s.base?C.copper:C.emerald),{r:2,op:s.base?1:.75});
+    /* negative values put their label to the right of zero, or it collides with the row label */
+    out+=t(s.v<0?zero+10:zero+w+8,y+13,(s.v<0?'−':'')+Math.abs(s.v).toFixed(2),
+      {size:12,mono:true,w:700,fill:s.v<0?C.alert:C.ink,anchor:'start'});
+  });
+  out+=t(L,12,'5-YEAR NPV · SAR MILLION',{size:9.5,w:700,fill:C.mute});
+  return svg(W,H,out);
+}
+
+/* 5x5 risk matrix */
+function vRisk(){
+  const W=520,H=300,L=64,T=14,cell=46;
+  let out='';
+  for(let i=0;i<5;i++)for(let j=0;j<5;j++){
+    const l=i+1,imp=5-j, e=l*imp;
+    const f = e>=15?'rgba(220,38,38,.14)': e>=8?'rgba(180,83,9,.11)':'rgba(5,150,105,.08)';
+    out+=rect(L+i*cell,T+j*cell,cell-2,cell-2,f,{r:2});
+  }
+  for(let i=1;i<=5;i++){ out+=t(L+(i-1)*cell+cell/2-1,T+5*cell+14,i,{size:10,mono:true,fill:C.mute,anchor:'middle'});
+    out+=t(L-10,T+(5-i)*cell+cell/2+4,i,{size:10,mono:true,fill:C.mute,anchor:'end'}); }
+  D.risks.forEach(r=>{
+    const cx=L+(r.l-1)*cell+cell/2-1+(r.dx||0), cy=T+(5-r.i)*cell+cell/2-1;
+    out+=`<circle cx="${cx}" cy="${cy}" r="${r.red?15:12}" fill="${r.red?C.alert:C.amber}" opacity="${r.red?1:.55}"/>`;
+    out+=t(cx,cy+4,r.id,{size:10,mono:true,w:700,fill:'#fff',anchor:'middle'});
+  });
+  out+=t(L+2.5*cell,H-6,'LIKELIHOOD',{size:9.5,w:700,fill:C.mute,anchor:'middle'});
+  out+=`<text x="18" y="${T+2.5*cell}" fill="${C.mute}" font-size="9.5" font-weight="700" text-anchor="middle" transform="rotate(-90 18 ${T+2.5*cell})">IMPACT</text>`;
+  return svg(W,H,out);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE STORY — Minto: every headline is an assertion, never a label
+   ══════════════════════════════════════════════════════════════════════════ */
+const SLIDES=[
+{cls:'dark',kick:'Neuriya · mizan — business process re-engineering',
+ h:'A warehouse operator can lose <em>four fifths</em> of its elapsed time without touching the floor.',
+ sub:'Nineteen stages, mapped end to end. The re-engineering is close to its ceiling, and two things remain open — one of them is being sold today.',
+ body:`<div class="grid" style="grid-template-columns:repeat(4,1fr)">
+   <div class="stat"><div class="v good">−81.6%</div><div class="k">end-to-end lead time<br>276 h → 50.9 h</div></div>
+   <div class="stat"><div class="v good">33.5%</div><div class="k">process cycle efficiency<br>from 6.2%</div></div>
+   <div class="stat"><div class="v warn">85%</div><div class="k">of what remains sits inside<br>gates we chose to keep</div></div>
+   <div class="stat"><div class="v bad">1 of 8</div><div class="k">service lines sold has a<br>process behind it</div></div></div>`,
+ foot:'The governing thought · everything that follows supports or qualifies this'},
+
+{kick:'Situation',
+ h:'Turning an enquiry into cash takes <em>276 hours</em>, and two stages hold more than half of it.',
+ sub:'Nineteen stages across five value streams. Only 17.1 hours are work a customer would pay to watch.',
+ body:vSituation,
+ foot:'<b>Contract signing and invoicing alone are 149 of the 276 hours.</b> Neither happens on the warehouse floor.'},
+
+{kick:'Complication',
+ h:'The waste is in the <em>paperwork</em>, not in the aisles.',
+ sub:'Four of the six largest reductions are commercial and financial stages. Floor stages were already measured, pressured and reasonably efficient.',
+ body:vBeforeAfter,
+ foot:'<b>This is exactly where a WMS-only investment does not reach</b> — which is why buying software without redesigning the process returns a fraction of this.'},
+
+{kick:'Complication',
+ h:'Nearly half of the removed work is one kind of waste: <em>re-keying the same fact</em>.',
+ sub:'Twenty-four recurring tasks stop existing. Each names a role and a frequency, so none is a category and all are countable.',
+ body:vWaste,
+ foot:'Extra-processing at this share is the signature of several systems each holding a version of the same fact — <b>the cheapest waste to remove, because the physical operation never changes</b>.'},
+
+{cls:'dark',kick:'Question',
+ h:'So the redesign works. <em>Is it finished?</em>',
+ sub:'Lead time falls whenever anyone tries. The question worth asking is whether the waiting was removed or merely compressed — and what is left after it.',
+ body:`<div class="grid" style="grid-template-columns:1fr 1fr;gap:26px">
+   <div class="panel"><div class="stat"><div class="v sm good">276 h → 50.9 h</div>
+     <div class="k">Lead time. The number that gets presented.</div></div></div>
+   <div class="panel"><div class="stat"><div class="v sm cop">6.2% → 33.5%</div>
+     <div class="k">Process cycle efficiency. The number that says whether the change was structural.</div></div></div></div>`,
+ foot:'Below 5% is an unimproved administrative process. 25% is the usual lean target for a service process.'},
+
+{kick:'Answer · 1 of 4',
+ h:'The redesign clears the lean benchmark with margin.',
+ sub:'Value-added time is unchanged, by definition — it is the work itself. Every hour of the improvement came out of waiting.',
+ body:vResult,
+ foot:'A 5.4× efficiency gain. <b>Continuous-flow manufacturing exceeds 50% and is not a fair comparison</b> — a warehouse contains deliberate storage.'},
+
+{kick:'Answer · 2 of 4',
+ h:'Of the 33.8 hours still waiting, <em>28.8 sit inside gates we deliberately refuse to automate</em>.',
+ sub:'That is the honest answer to whether the redesign is finished. Within the stated automation policy, it is close to the practical floor.',
+ body:vResidual,
+ foot:'<b>Only 5 hours across nineteen stages are mechanically addressable.</b> Removing two gates would take out another 24 — the operating model forbids it, and that prohibition is a board commitment, not a technical constraint.'},
+
+{kick:'Answer · 2 of 4 — the move that is available',
+ h:'One gate holds <em>65%</em> of everything that is left.',
+ sub:'The act of signing must stay human. The latency around it need not — and those 22 hours are not deliberation.',
+ body:vGate,
+ foot:'The highest-return single change in the engagement. It was invisible until gates were mapped separately from waiting. <b>The cold-chain disposition control needs the same signature, and has no owner either.</b>'},
+
+{cls:'dark',kick:'Answer · 3 of 4 — the second complication',
+ h:'The operating model is a <em>warehousing</em> model wearing a logistics-services name.',
+ sub:'Eight service lines are sold. One has a process that executes it. Freight forwarding and equipment handling have nothing at all — the words appear in no process and no system component.',
+ body:()=>vLines(true),
+ foot:'Two honest readings, and the choice is commercial: <b>either the scope is warehousing and the four-line scenario stops being shown as a capability, or freight and transport need execution processes.</b>'},
+
+{kick:'Answer · 3 of 4',
+ h:'Three processes cannot reach their target until something not in the plan exists.',
+ sub:'Maturity scored 1 to 5 against a defined rubric. The spread is the work; the red flags are the prerequisites.',
+ body:vMaturity,
+ foot:'Cost-to-serve is capped because labour and utility cost reach reporting but not billing. <b>Margin is therefore computed after the invoice rather than beside it</b> — which is how an operator learns a contract was unprofitable at renewal instead of in month two.'},
+
+{kick:'Answer · 4 of 4',
+ h:'Sequence by dependency, not by appetite.',
+ sub:'Six waves. The first changes no system at all, and it is the one that decides whether any benefit can be proven in year two.',
+ body:vWaves,
+ foot:'<b>Wave 5 has no date because it has no decision.</b> Until the portfolio question is answered it is a placeholder, not a plan.'},
+
+{kick:'The case',
+ h:'It survives any single adverse assumption, and fails if all three land together.',
+ sub:'Built on a representative operator, not an audited baseline. The structure is what to argue with; the numbers are what to replace.',
+ body:()=>`<div style="display:flex;gap:34px;width:100%;align-items:center">
+   <div style="flex:0 0 620px">${vCase()}</div><div style="flex:0 0 460px">${vSens()}</div></div>`,
+ foot:'<b>Instrument revenue leakage before committing.</b> It is both the largest line and the most measurable — one month of billing data against captured activity settles it.'},
+
+{kick:'Risk',
+ h:'Three risks will decide this, and <em>one of them exists already</em>.',
+ sub:'Twenty risks scored and owned. R01 is not a programme risk — it is a live operating exposure the diagnostic happened to surface.',
+ body:()=>`<div style="display:flex;gap:44px;width:100%;align-items:center">
+   <div style="flex:0 0 520px">${vRisk()}</div>
+   <ul class="pts" style="flex:1 1 auto;min-width:0">
+     <li><b>R01 · Dangerous goods is sold, and the segregation control does not exist.</b> The only risk here with a path to physical harm. Needs a written CEO decision this month, implementation or not.</li>
+     <li><b>R02 · Pharmaceutical storage before serialisation.</b> Not lawful. A hard qualification rule, not a judgement call.</li>
+     <li><b>R03 · No baseline.</b> Highest exposure, cheapest to close, skipped in almost every programme — and then in year two nobody can say what the 81.6% was measured against.</li>
+   </ul></div>`,
+ foot:'<b>R07 costs nothing and decides everything:</b> a compliance officer who reports to the person their block interrupts is not an officer.'},
+
+{cls:'dark',kick:'What to decide',
+ h:'Three decisions, none of which needs a budget.',
+ sub:'Each is upstream of the programme. Each gets more expensive the later it is taken.',
+ body:`<div class="grid" style="grid-template-columns:repeat(3,1fr);gap:22px">
+   <div class="panel"><div class="stat"><div class="v sm bad">This month</div>
+     <div class="k"><b style="color:#F2F0EA">Dangerous goods.</b> Stop selling it, or contract with a written manual control and a named accountable officer. Silence is the one option not available.</div></div></div>
+   <div class="panel"><div class="stat"><div class="v sm warn">Before wave 1</div>
+     <div class="k"><b style="color:#F2F0EA">The baseline, and the compliance reporting line.</b> Two weeks of measurement and one governance change. Together they decide whether the benefits are provable and whether the controls are real.</div></div></div>
+   <div class="panel"><div class="stat"><div class="v sm cop">Before wave 5</div>
+     <div class="k"><b style="color:#F2F0EA">Is this a WMS or a logistics-services platform?</b> Two of eight sold lines have no process. The answer changes the roadmap, the catalogue and the sales story.</div></div></div></div>`,
+ foot:'Full reasoning in the pack — <b>process architecture, operating model, value stream, governance, case, roadmap, risk.</b>'},
+];
+
+/* ── build ────────────────────────────────────────────────────────────── */
+const deck=document.getElementById('deck');
+deck.innerHTML=SLIDES.map(s=>{
+  const body = typeof s.body==='function' ? s.body() : (s.body||'');
+  return `<section class="slide ${s.cls||''}">
+    <div class="kick">${s.kick}</div>
+    <h2>${s.h}</h2>
+    ${s.sub?`<p class="sub">${s.sub}</p>`:''}
+    <div class="body">${body}</div>
+    ${s.foot?`<div class="foot"><span>${s.foot}</span></div>`:''}
+  </section>`;
+}).join('');
+
+const slides=[...document.querySelectorAll('.slide')];
+let cur=0;
+function go(i){
+  cur=Math.max(0,Math.min(slides.length-1,i));
+  slides.forEach((s,n)=>s.classList.toggle('on',n===cur));
+  document.getElementById('ct').textContent=(cur+1)+' / '+slides.length;
+  document.getElementById('bar').style.width=((cur+1)/slides.length*100)+'%';
+  history.replaceState(null,'','#s'+(cur+1));
+}
+function fs(){ if(document.fullscreenElement) document.exitFullscreen();
+  else if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); }
+addEventListener('keydown',e=>{
+  if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();go(cur+1);}
+  if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(cur-1);}
+  if(e.key==='Home')go(0); if(e.key==='End')go(slides.length-1);
+  if(e.key==='f')fs();
+});
+addEventListener('click',e=>{ if(e.target.closest('#hud')) return;
+  go(cur + (e.clientX < innerWidth*0.28 ? -1 : 1)); });
+
+/* Scale the fixed 1280×720 stage into whatever window it is shown in. */
+function fit(){ deck.style.transform='scale('+Math.min(innerWidth/1280,(innerHeight-52)/720)+')'; }
+addEventListener('resize',fit); fit();
+go(location.hash.startsWith('#s') ? (+location.hash.slice(2)||1)-1 : 0);
+</script>
+</body>
+</html>
